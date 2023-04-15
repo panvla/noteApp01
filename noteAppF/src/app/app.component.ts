@@ -97,6 +97,43 @@ export class AppComponent implements OnInit {
     );
   }
 
+  filterNotes(level: Level): void {
+    this.filteredSubject.next(level);
+    this.appState$ = this.noteService
+      .filterNotes$(level, this.dataSubject.value)
+      .pipe(
+        map((response) => {
+          return { dataState: DataState.LOADED, data: response };
+        }),
+        startWith({
+          dataState: DataState.LOADED,
+          data: this.dataSubject.value,
+        }),
+        catchError((error: string) => {
+          return of({ dataState: DataState.ERROR, error });
+        })
+      );
+  }
+
+  deleteNote(noteId: number): void {
+    this.appState$ = this.noteService.delete$(noteId).pipe(
+      map((response) => {
+        this.dataSubject.next({
+          ...response,
+          notes: this.dataSubject.value.notes.filter(
+            (note) => note.id !== response.notes[0].id
+          ),
+        });
+        this.filteredSubject.next(Level.ALL);
+        return { dataState: DataState.LOADED, data: this.dataSubject.value };
+      }),
+      startWith({ dataState: DataState.LOADED, data: this.dataSubject.value }),
+      catchError((error: string) => {
+        return of({ dataState: DataState.ERROR, error });
+      })
+    );
+  }
+
   selectNote(note: Note): void {
     this.selectedNoteSubject.next(note);
     document.getElementById('editNoteButton').click();
